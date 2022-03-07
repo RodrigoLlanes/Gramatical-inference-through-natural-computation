@@ -1,7 +1,6 @@
 from grammar import Grammar
-from random import choices,randint
-from typing import Set, Dict, Tuple, List, Optional
-from genome import random_combination, random_simple_mutations
+from itertools import product
+from typing import Set, Dict, Tuple, List, Optional, Iterator
 
 Symbol = str
 Word = List[Symbol]
@@ -66,3 +65,13 @@ def fitness(g: Grammar, w: Word, positive: bool, th: Optional[int] = None) -> fl
             #return 1 - best
     else:
         return int(not cyk(g, w))
+
+
+def cases_generator(g: Grammar, n: Optional[int] = None) -> Iterator[Tuple[Word, bool]]:
+    words = 0
+    size = 1
+    while n is None or words < n:
+        for word in product(g.terminal, repeat=size):
+            yield word, cyk(g, list(word))
+            words += 1
+        size += 1

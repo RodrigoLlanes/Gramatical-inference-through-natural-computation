@@ -1,9 +1,9 @@
 from grammar import Grammar
-from fitness import fitness
+from fitness import fitness, cases_generator
 from genome import random_combination, random_simple_mutations
 
 from typing import List
-from random import choices,randint
+from random import choices, randint, shuffle
 
 
 Symbol = str
@@ -11,6 +11,7 @@ Word = List[Symbol]
 
 
 def main():
+    # Parameters
     n_non_term_sym = 5
     n_terminal_sym = 2
     n_non_term_prod = 18
@@ -20,9 +21,19 @@ def main():
     n_crossovers = 5
     n_mutations = 5
     mutation_size_range = (1, 10)
+    n_cases = 100
+    train_proportion = 0.75
+
+    # Target grammar parameters
+    s_t = 'A'
+    non_term_t = {'A', 'B', 'C', 'D'}
+    terminal_t = {'a', 'b'}
+    grammar_t = {'A': {('B','C')},
+                 'B': {('a',)},
+                 'C': {('b',), ('A', 'D')},
+                 'D': {('b',)}}
 
 
-    # test()
     s = 'A'
     non_terminal = {chr(ord('A') + i) for i in range(n_non_term_sym)}
     terminal = {chr(ord('a') + i) for i in range(n_terminal_sym)}
@@ -34,17 +45,17 @@ def main():
         grammars = [grammar.encoded() for grammar in grammars if grammar.is_valid()]
         tissue.append(grammars)
 
-    non_term_t = {'A', 'B', 'C', 'D'}
-    terminal_t = {'a', 'b'}
-    grammar_t = {'A': {('B','C')},
-                 'B': {('a',)},
-                 'C': {('b',), ('A', 'D')},
-                 'D': {('b',)}}
-    train_cases = [(('a', 'b'), True), (('a', 'b', 'a'), False), (('b', 'b'), False), (('a', 'a', 'b', 'b'), True), (('a', 'a', 'a', 'b', 'b', 'b'), True)]
-    test_cases = [(('a', 'a'), False), (('a', 'b', 'b'), False), (('b', 'a', 'b'), False), (('a', 'a', 'a', 'a', 'b', 'b', 'b', 'b'), True), (('a', 'a', 'a', 'a', 'a', 'b', 'b', 'b', 'b', 'b'), True)] + train_cases
+    target_grammar = Grammar(non_term_t, terminal_t, grammar_t, s_t)
+
+    cases = list(cases_generator(target_grammar, n_cases))
+    shuffle(cases)
+
+    train_i = int(n_cases * train_proportion)
+    train_cases = cases[:train_i]
+    test_cases = cases[train_i:]
 
     for word, positive in train_cases:
-        print(word)
+        print(word, positive)
         for i, cell in enumerate(tissue):
             cell.sort(key=lambda genome: fitness(Grammar.decode(non_terminal, terminal, s, genome), word, positive), reverse=True)
             out_cell.append(cell[0])
