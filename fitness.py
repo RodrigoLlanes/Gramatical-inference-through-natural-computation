@@ -3,7 +3,7 @@ from grammar import Grammar
 from math import floor, ceil
 from itertools import product
 from random import sample, choices, randint
-from typing import Set, Dict, Tuple, List, Optional, Iterator
+from typing import Set, Dict, Tuple, List, Optional, Generator
 
 Symbol = str
 Word = List[Symbol]
@@ -70,7 +70,7 @@ def fitness(g: Grammar, w: Word, positive: bool, th: Optional[int] = None) -> fl
         return int(not cyk(g, w))
 
 
-def cases_generator(g: Grammar, n: Optional[int] = None) -> Iterator[Tuple[Word, bool]]:
+def cases_generator(g: Grammar, n: Optional[int] = None) -> Generator[Tuple[Word, bool], None, None]:
     words = 0
     size = 1
     while n is None or words < n:
@@ -89,6 +89,7 @@ def balanced_cases(g: Grammar, n: int, positive_rate: Optional[float] = 0.5) -> 
     max_size = len(positives[-1])
     terminals = list(g.terminal)
     while True:
+        print(len(terminals) ** max_size, rest, len(positives), ceil(n * (1 - positive_rate)))
         while len(word := next(it)) == max_size:
             rest += 1
         if len(terminals) ** max_size - rest - len(positives) >= ceil(n * (1 - positive_rate)):
@@ -96,6 +97,7 @@ def balanced_cases(g: Grammar, n: int, positive_rate: Optional[float] = 0.5) -> 
         max_size = len(word)
         rest += 1
 
+    print("NEGATIVES")
     negatives = set()
     while len(negatives) <  ceil(n * (1 - positive_rate)):
         word = choices(terminals, k=randint(1, max_size))

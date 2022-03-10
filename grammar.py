@@ -5,7 +5,7 @@ from random import choice
 from genome import split_gen
 from collections import defaultdict
 from functools import singledispatchmethod
-from typing import Set, Dict, Union, Tuple, List, Iterator, Optional
+from typing import Set, Dict, Union, Tuple, List, Generator, Optional
 
 
 Symbol = str
@@ -91,7 +91,7 @@ class Grammar:
 
         return True
 
-    def words_iterator(self, max_length: Optional[int] = None) -> Iterator[Word]:
+    def words_iterator(self, max_length: Optional[int] = None) -> Generator[Word, None, None]:
         heap = []
         visited = set()
         heapq.heappush(heap, (0, [self.s]))
