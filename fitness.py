@@ -1,5 +1,8 @@
 from grammar import Grammar
+
+from math import floor, ceil
 from itertools import product
+from random import sample, choices, randint
 from typing import Set, Dict, Tuple, List, Optional, Iterator
 
 Symbol = str
@@ -75,3 +78,39 @@ def cases_generator(g: Grammar, n: Optional[int] = None) -> Iterator[Tuple[Word,
             yield word, cyk(g, list(word))
             words += 1
         size += 1
+
+
+def balanced_cases(g: Grammar, n: int, positive_rate: Optional[float] = 0.5) -> List[Tuple[Word, bool]]:
+    it = g.words_iterator()
+    positives = [(next(it), True) for _ in range(floor(n * positive_rate))]
+
+    # Error checking
+    rest = 0
+    max_size = len(positives[-1])
+    terminals = list(g.terminal)
+    while True:
+        while len(word := next(it)) == max_size:
+            rest += 1
+        if len(terminals) ** max_size - rest - len(positives) >= ceil(n * (1 - positive_rate)):
+            break
+        max_size = len(word)
+        rest += 1
+
+    negatives = set()
+    while len(negatives) <  ceil(n * (1 - positive_rate)):
+        word = choices(terminals, k=randint(1, max_size))
+        if not cyk(g, word):
+            negatives.add((tuple(word), False))
+    return list(negatives) + positives
+
+    """
+    positives, negatives = [], []
+    for word, positive in cases_generator(g):
+        if len(positives) / positive_rate >= n:
+            return sample(negatives, floor(n * (1-positive_rate))) + sample(positives, ceil(n * positive_rate))
+        if positive:
+            positives.append((word, positive))
+        else:
+            negatives.append((word, positive))
+    """
+
