@@ -44,7 +44,6 @@ def by_params(params: List[str]) -> Callable[[Dict], tuple]:
 
 
 def load_data(result_path: str) -> Tuple[str, List[str], Dict[tuple, List[float]]]:
-    print(result_path)
     with open(result_path, 'r') as f:
         data = json.load(f)
         language = get_language(data['cases_path'])
