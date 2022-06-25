@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import json
 import heapq
 from random import choice
+from copy import deepcopy
 from genome import split_gen
 from collections import defaultdict
-from functools import singledispatchmethod
 from typing import Set, Dict, Union, Tuple, List, Generator, Optional
 
 
@@ -43,7 +44,14 @@ class Grammar:
         return out
 
     @staticmethod
-    def random(non_terminal: Set[Symbol], terminal: Set[Symbol], n_non_term_prod: int, n_term_prod: int) -> Grammar:
+    def load(path: str) -> Grammar:
+        with open(path, 'r') as f:
+            data = json.load(f)
+            prod = {k: {tuple(p) for p in v} for k, v in data['P'].items()}
+            return Grammar(set(data['Vn']), set(data['Vt']), prod, data['S'])
+
+    @staticmethod
+    def random(non_terminal: Set[Symbol], terminal: Set[Symbol], s: Symbol, n_non_term_prod: int, n_term_prod: int) -> Grammar:
         non_term, term = list(non_terminal), list(terminal)
 
         rules = set()
@@ -60,14 +68,22 @@ class Grammar:
         for rule in rules:
             grammar[rule[0]].add(tuple(list(rule)[1:]))
 
-        return Grammar(set(non_term), set(term), grammar, 'A')
+        return Grammar(set(non_term), set(term), grammar, s)
 
     @staticmethod
-    def decode(non_terminal: Set[Symbol], terminal: Set[Symbol], s: Symbol, gen: List[Symbol]) -> 'Grammar':
+    def decode(non_terminal: Set[Symbol], terminal: Set[Symbol], s: Symbol, gen: List[Symbol]) -> Grammar:
         grammar = defaultdict(lambda: set())
         for p in split_gen(terminal, gen):
             grammar[p[0]].add(tuple(p[1:]))
         return Grammar(non_terminal, terminal, grammar, s)
+
+    def serializable(self) -> dict:
+        return {
+            'S':  self.s,
+            'Vn': list(self.non_terminal),
+            'Vt': list(self.terminal),
+            'P':  {k: list(v) for k, v in self.productions.items()}
+        }
 
     def is_valid(self) -> bool:
         heap = [self.s]
@@ -91,14 +107,49 @@ class Grammar:
 
         return True
 
+    def simplified_productions(self) -> Productions:
+        out = deepcopy(self.productions)
+        while True:
+            iterable = deepcopy(out)
+            for k, ps in iterable.items():
+                if k == self.s:
+                    continue
+
+                if all(k not in p for p in ps):
+                    for start, prods in iterable.items():
+                        out_prods = set()
+                        for prod in prods:
+                            i = prod.index(k) if k in prod else -1
+                            if i >= 0:
+                                for p in ps:
+                                    new_prod = []
+                                    for symb in prod:
+                                        if symb == k:
+                                            new_prod += list(p)
+                                        else:
+                                            new_prod.append(symb)
+                                    out_prods.add(tuple(new_prod))
+                            else:
+                                out_prods.add(prod)
+                        out[start] = out_prods
+                    del out[k]
+                    break
+            else:
+                break
+
+        return out
+
     def words_iterator(self, max_length: Optional[int] = None) -> Generator[Word, None, None]:
+        # Productions simplification
+        productions = self.simplified_productions()
+
         heap = []
         visited = set()
-        heapq.heappush(heap, (0, [self.s]))
+        heapq.heappush(heap, (1, [self.s]))
         while len(heap):
             l, w = heapq.heappop(heap)
             for index in [i for i in range(len(w)) if w[i] in self.non_terminal]:
-                for p in self[w[index]]:
+                for p in productions[w[index]]:
                     nw = w[:index] + list(p) + w[index+1:]
                     if tuple(nw) in visited or (max_length is not None and len(nw) >= max_length):
                         continue
@@ -107,7 +158,7 @@ class Grammar:
                         yield nw
                     else:
                         visited.add(tuple(nw))
-                        heapq.heappush(heap, (l+1, nw))
+                        heapq.heappush(heap, (len(nw), nw))
 
     def encoded(self) -> List[Symbol]:
         gen = []
